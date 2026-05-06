@@ -12,7 +12,8 @@ def angry_professor(k, a):
 
 
 
-k = 57
-a = [-1, -3, 0, 2, 4]
+k = 3
+a = [-2, -1, 0, 1, 2
+    ]
 
 print(angry_professor(k, a))
