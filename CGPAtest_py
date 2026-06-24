@@ -3,10 +3,7 @@ import os
 
 DATA_FILE = "student_data.json"
 
-
-# -----------------------------
 # Grade Point Function
-# -----------------------------
 def get_grade_point(score):
     if 70 <= score <= 100:
         return 5, "A"
@@ -21,10 +18,7 @@ def get_grade_point(score):
     else:
         return 0, "F"
 
-
-# -----------------------------
 # GPA Calculation
-# -----------------------------
 def calculate_gpa(courses):
     total_points = 0
     total_units = 0
@@ -56,10 +50,8 @@ def calculate_cgpa(semesters):
 
     return round(total_points / total_units, 2)
 
+# GPA Classification
 
-# -----------------------------
-# Classification
-# -----------------------------
 def get_classification(cgpa):
     if cgpa >= 4.5:
         return "First Class"
@@ -73,27 +65,41 @@ def get_classification(cgpa):
         return "Pass"
 
 
-# -----------------------------
+
 # Save Data
-# -----------------------------
+
 def save_data(data):
     with open(DATA_FILE, "w") as file:
         json.dump(data, file, indent=4)
 
 
-# -----------------------------
+
 # Load Data
-# -----------------------------
+
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as file:
             return json.load(file)
     return []
 
+# Student Information
+def get_student_info():
+    print("\n===== STUDENT INFORMATION =====")
 
-# -----------------------------
+    name = input("Enter Student Name: ")
+    matric_no = input("Enter Matric Number: ")
+    course_of_study = input("Enter Course of Study: ")
+
+    return {
+        "name": name,
+        "matric_no": matric_no,
+        "course_of_study": course_of_study,
+        "semesters": []
+    }
+
+
+
 # Add Semester
-# -----------------------------
 def add_semester(data):
     semester_name = input("Enter semester name: ")
 
@@ -152,16 +158,25 @@ def add_semester(data):
         "gpa": gpa
     }
 
-    data.append(semester)
+    data["semesters"].append(semester)
 
     save_data(data)
 
     print(f"\nSemester GPA: {gpa}")
 
 
-# -----------------------------
+
 # Display Summary
-# -----------------------------
+def display_summary(data):
+    if not data:
+        print("No records found.")
+        return
+
+    print("\n===== STUDENT SUMMARY =====")
+    print(f"Name: {data['name']}")
+    print(f"Matric Number: {data['matric_no']}")
+    print(f"Course of Study: {data['course_of_study']}")
+
 def display_summary(data):
     if not data:
         print("No records found.")
@@ -188,11 +203,14 @@ def display_summary(data):
     print(f"Classification: {get_classification(cgpa)}")
 
 
-# -----------------------------
-# Main Menu
-# -----------------------------
+
+# CGPA Main Menu
+
 def main():
     data = load_data()
+
+    if not data:
+        data = get_student_info()
 
     while True:
         print("\n===== CGPA CALCULATOR =====")
@@ -215,8 +233,4 @@ def main():
         else:
             print("Invalid option.")
 
-
-# -----------------------------
-# Run Program
-# -----------------------------
 main()
