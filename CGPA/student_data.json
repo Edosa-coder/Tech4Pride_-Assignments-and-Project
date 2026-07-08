@@ -1,0 +1,61 @@
+{
+    "name": "Edosa",
+    "matric_no": "SCI/14/15/0171",
+    "course_of_study": "Microbiology",
+    "semesters": [
+        {
+            "semester_name": "1st",
+            "courses": [
+                {
+                    "course_name": "English",
+                    "score": 76,
+                    "unit": 5,
+                    "grade_point": 5,
+                    "grade_letter": "A"
+                },
+                {
+                    "course_name": "Mycology",
+                    "score": 56,
+                    "unit": 4,
+                    "grade_point": 3,
+                    "grade_letter": "C"
+                },
+                {
+                    "course_name": "Bacteriology",
+                    "score": 67,
+                    "unit": 4,
+                    "grade_point": 4,
+                    "grade_letter": "B"
+                },
+                {
+                    "course_name": "Food Microbiology",
+                    "score": 78,
+                    "unit": 5,
+                    "grade_point": 5,
+                    "grade_letter": "A"
+                }
+            ],
+            "gpa": 4.33
+        },
+        {
+            "semester_name": "2nd",
+            "courses": [
+                {
+                    "course_name": "English",
+                    "score": 67,
+                    "unit": 4,
+                    "grade_point": 4,
+                    "grade_letter": "B"
+                },
+                {
+                    "course_name": "Microbials",
+                    "score": 78,
+                    "unit": 5,
+                    "grade_point": 5,
+                    "grade_letter": "A"
+                }
+            ],
+            "gpa": 4.56
+        }
+    ]
+}
