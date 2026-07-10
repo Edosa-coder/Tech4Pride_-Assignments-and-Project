@@ -1,3 +1,0 @@
-class AgeError extends Error {
-    
-}
