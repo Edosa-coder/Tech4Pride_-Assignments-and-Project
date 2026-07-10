@@ -1,9 +1,9 @@
-def non_empty(msg):
+def get_valid_text(msg):
     while True:
         v=input(msg).strip()
         if v:return v
         print("Input cannot be empty.")
-def positive_int(msg):
+def get_positive_int(msg):
     while True:
         try:
             n=int(input(msg))

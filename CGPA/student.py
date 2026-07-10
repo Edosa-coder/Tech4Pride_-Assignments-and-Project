@@ -3,20 +3,20 @@ from validation import *
 from file_handler import save_data
 
 def get_student_info():
-    return {"name":non_empty("Student Name: "),
-            "matric_no":non_empty("Matric Number: "),
-            "course_of_study":non_empty("Course of Study: "),
+    return {"name":get_valid_text("Student Name: "),
+            "matric_no":get_valid_text("Matric Number: "),
+            "course_of_study":get_valid_text("Course of Study: "),
             "semesters":[]}
 
 def add_semester(data):
-    sem=non_empty("Semester Name: ")
-    n=positive_int("Number of courses: ")
+    sem=get_valid_text("Semester Name: ")
+    n=get_positive_int("Number of courses: ")
     courses=[]
     for i in range(n):
         print(f"\nCourse {i+1}")
-        name=non_empty("Course Name: ")
+        name=get_valid_text("Course Name: ")
         s=score()
-        u=positive_int("Course Unit: ")
+        u=get_positive_int("Course Unit: ")
         gp,gl=get_grade_point(s)
         courses.append({"course_name":name,
                         "score":s,
