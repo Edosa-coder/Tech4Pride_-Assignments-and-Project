@@ -3,32 +3,49 @@ from validation import *
 from file_handler import save_data
 
 def get_student_info():
-    return {"name":get_valid_text("Student Name: "),
-            "matric_no":get_valid_text("Matric Number: "),
-            "course_of_study":get_valid_text("Course of Study: "),
+
+    return {"name":get_name("Student Name: "),
+            "matric_no":get_matric_number("Matric Number: "),
+            "course_of_study":get_course_of_study("Course of Study: "),
             "semesters":[]}
 
 def add_semester(data):
-    sem=get_valid_text("Semester Name: ")
-    n=get_positive_int("Number of courses: ")
-    courses=[]
+
+    sem = get_semester_name("Semester Name: ")
+    n = get_course_count("Number of courses: ")
+
+    courses = []
+    entered_courses = set()
+
     for i in range(n):
         print(f"\nCourse {i+1}")
-        name=get_valid_text("Course Name: ")
-        s=score()
-        u=get_positive_int("Course Unit: ")
-        gp,gl=get_grade_point(s)
-        courses.append({"course_name":name,
-                        "score":s,
-                        "unit":u,
-                        "grade_point":gp,
-                        "grade_letter":gl})
-    gpa=calculate_gpa(courses)
-    data["semesters"].append({"semester_name":sem,
-                              "courses":courses,
-                              "gpa":gpa})
+
+        name = get_course_name("Course Name: ", entered_courses)
+        entered_courses.add(name)
+
+        s = score()
+        u = get_course_unit("Course Unit: ")
+
+        gp, gl = get_grade_point(s)
+
+        courses.append({
+            "course_name": name,
+            "score": s,
+            "unit": u,
+            "grade_point": gp,
+            "grade_letter": gl
+        })
+
+    gpa = calculate_gpa(courses)
+
+    data["semesters"].append({
+        "semester_name": sem,
+        "courses": courses,
+        "gpa": gpa
+    })
+
     save_data(data)
-    print("Semester GPA:",gpa)
+    print("Semester GPA:", gpa)
 
 def display_summary(data):
     print("\n===== STUDENT SUMMARY =====")

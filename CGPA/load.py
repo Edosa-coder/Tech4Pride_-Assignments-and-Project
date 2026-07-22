@@ -1,6 +1,8 @@
 from file_handler import load_data
 from student import *
 
+print("Start")
+
 def main():
     data=load_data()
     if not data:
@@ -14,3 +16,5 @@ def main():
         else: print("Invalid choice.")
 if __name__=="__main__":
     main()
+
+print('End')
