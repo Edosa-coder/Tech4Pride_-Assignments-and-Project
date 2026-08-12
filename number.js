@@ -1,12 +1,17 @@
 function convertPhoneNumber(phone) {
+
     if (phone.startsWith("+234")) {
         phone = "0" + phone.slice(4);
+
     } else if (phone.startsWith("234")) {
         phone = "0" + phone.slice(3);
+
     } else if (phone.startsWith("0")) {
         // Do nothing
+
     } else if (phone.length === 10) {
         // Already 10 digits
+
     } else {
         return null;
     }
@@ -15,49 +20,152 @@ function convertPhoneNumber(phone) {
 }
 
 
+function getNetwork(phone) {
+
+    // If the phone number is 10 figures, add 0 before it
+    if (phone.length === 10) {
+        phone = "0" + phone;
+    }
+
+    // Get first 4 digits
+    let prefix = phone.slice(0, 4);
+
+
+    // MTN
+    if (
+        prefix === "0803" ||
+        prefix === "0806" ||
+        prefix === "0810" ||
+        prefix === "0703" ||
+        prefix === "0706" ||
+        prefix === "0903" ||
+        prefix === "0906"
+    ) {
+        return "MTN";
+    }
+
+
+    // AIRTEL
+    if (
+        prefix === "0802" ||
+        prefix === "0808" ||
+        prefix === "0812" ||
+        prefix === "0708" ||
+        prefix === "0701" ||
+        prefix === "0901" ||
+        prefix === "0904" ||
+        prefix === "0912"
+    ) {
+        return "Airtel";
+    }
+
+
+    // GLO
+    if (
+        prefix === "0805" ||
+        prefix === "0807" ||
+        prefix === "0811" ||
+        prefix === "0815" ||
+        prefix === "0905" ||
+        prefix === "0915"
+    ) {
+        return "Glo";
+    }
+
+
+    // 9mobile
+    if (
+        prefix === "0809" ||
+        prefix === "0817" ||
+        prefix === "0818" ||
+        prefix === "0908" ||
+        prefix === "0909"
+    ) {
+        return "9mobile";
+    }
+
+    return "Unknown";
+}
+
+
 let phoneNumbers = [
-    "+2348176604821",
-    "2348176604821",
-    "08176604821",
-    "8176604821",
-    "07012345678",
-    "9012345678",
-    "1234567890",
-    "08012A45678",
-    "081234567890",
-    "ABCDEFGHIJJ"
+
+    "My name is Edosa, my 49815671345 number is 08176604821 2348012345678 +2348012345678",
+
+    "07035671345 09012345678 09032345678 8134312272 01242345678 is the 45671345 phone number"
+
 ];
 
+
+// Loop through each sentence
 for (let j = 0; j < phoneNumbers.length; j++) {
 
-    let phone = phoneNumbers[j];
+    // Put each sentence into separate words
+    let words = phoneNumbers[j].split(" ");
 
-    // Convert the number first
-    phone = convertPhoneNumber(phone);
 
-    if (phone === null) {
-        console.log(phoneNumbers[j] + "   Invalid format");
-    } else if (phone.length !== 10 && phone.length !== 11) {
-        console.log(phoneNumbers[j] + "   Phone number must be 10 or 11 digits.");
-    } else {
+    // Loop through each word
+    for (let i = 0; i < words.length; i++) {
+
+        let originalPhone = words[i];
+
+
+        // Confirm that the word could be a phone number
+        if (
+            originalPhone.length !== 10 &&
+            originalPhone.length !== 11 &&
+            originalPhone.length !== 13 &&
+            originalPhone.length !== 14
+        ) {
+            continue;
+        }
+
+
+        // CONVERT PHONE NUMBER
+        let phone = convertPhoneNumber(originalPhone);
+
+
+        if (phone === null) {
+            console.log(originalPhone + " -> invalid format");
+            continue;
+        }
+
+
+        // Phone number must be 10 or 11 digits
+        if (phone.length !== 10 && phone.length !== 11) {
+
+            console.log(
+                originalPhone +
+                " -> Phone number must be 10 or 11 digits."
+            );
+
+            continue;
+        }
+
 
         let valid = true;
 
+
         // Characters must be digits/numbers only
-        for (let i = 0; i < phone.length; i++) {
-            if (phone[i] < "0" || phone[i] > "9") {
+        for (let k = 0; k < phone.length; k++) {
+
+            if (phone[k] < "0" || phone[k] > "9") {
                 valid = false;
             }
         }
 
+
         // Check the network prefix
         let prefix;
 
+
         if (phone.length === 11) {
             prefix = phone.slice(0, 3);
+
         } else {
             prefix = phone.slice(0, 2);
         }
+
 
         if (
             prefix !== "070" &&
@@ -74,10 +182,27 @@ for (let j = 0; j < phoneNumbers.length; j++) {
             valid = false;
         }
 
+
+        // RESULT
         if (valid) {
-            console.log(phoneNumbers[j] + "  Valid Nigerian phone number.");
+
+            let network = getNetwork(phone);
+
+            console.log(
+                originalPhone +
+                " -> " +
+                true +
+                " -> " +
+                network
+            );
+
         } else {
-            console.log(phoneNumbers[j] + "  Invalid phone number.");
+
+            console.log(
+                originalPhone +
+                " -> " +
+                false
+            );
         }
     }
 }
