@@ -84,18 +84,14 @@ function getNetwork(phone) {
         return "9mobile";
     }
 
-    return "Unknown";
+    return null;
 }
 
 
 let phoneNumbers = [
-
-    "My name is Edosa, my 49815671345 number is 08176604821 2348012345678 +2348012345678",
-
+    "My name is Edosa, my 49815671345 number is 08176604821, 2348012345678 +2348012345678",
     "07035671345 09012345678 09032345678 8134312272 01242345678 is the 45671345 phone number"
-
 ];
-
 
 // Loop through each sentence
 for (let j = 0; j < phoneNumbers.length; j++) {
@@ -103,69 +99,31 @@ for (let j = 0; j < phoneNumbers.length; j++) {
     // Put each sentence into separate words
     let words = phoneNumbers[j].split(" ");
 
-
     // Loop through each word
     for (let i = 0; i < words.length; i++) {
 
-        let originalPhone = words[i];
-
-
-        // Confirm that the word could be a phone number
-        if (
-            originalPhone.length !== 10 &&
-            originalPhone.length !== 11 &&
-            originalPhone.length !== 13 &&
-            originalPhone.length !== 14
-        ) {
-            continue;
-        }
-
-
         // CONVERT PHONE NUMBER
+        let originalPhone = words[i];
         let phone = convertPhoneNumber(originalPhone);
 
-
-        if (phone === null) {
-            console.log(originalPhone + " -> invalid format");
-            continue;
-        }
-
-
-        // Phone number must be 10 or 11 digits
-        if (phone.length !== 10 && phone.length !== 11) {
-
-            console.log(
-                originalPhone +
-                " -> Phone number must be 10 or 11 digits."
-            );
-
-            continue;
-        }
-
-
+        if (!phone) continue;
         let valid = true;
-
 
         // Characters must be digits/numbers only
         for (let k = 0; k < phone.length; k++) {
-
             if (phone[k] < "0" || phone[k] > "9") {
                 valid = false;
             }
         }
 
-
         // Check the network prefix
         let prefix;
 
-
         if (phone.length === 11) {
             prefix = phone.slice(0, 3);
-
         } else {
             prefix = phone.slice(0, 2);
         }
-
 
         if (
             prefix !== "070" &&
@@ -188,7 +146,7 @@ for (let j = 0; j < phoneNumbers.length; j++) {
 
             let network = getNetwork(phone);
 
-            console.log(
+        console.log(
                 originalPhone +
                 " -> " +
                 true +
