@@ -2,7 +2,7 @@
 
 A production-style REST API for managing bank accounts, users, balances, and financial transactions. Built with **Node.js, Express, MySQL, and JWT authentication**, with a focus on database design, normalization, validation, security, and transactional integrity.
 
-## 🚀 Project Overview
+## Project Overview
 
 The Bank Account REST API allows users to:
 
@@ -20,7 +20,7 @@ The project was developed as a backend engineering capstone, covering both **dat
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Technology           | Purpose                          |
 | -------------------- | -------------------------------- |
@@ -52,7 +52,7 @@ The project was developed as a backend engineering capstone, covering both **dat
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```text
 bank-api/
@@ -83,7 +83,7 @@ bank-api/
 
 ---
 
-## 🗄️ Database Design
+##  Database Design
 
 The database is designed and normalized to **Third Normal Form (3NF)**.
 
@@ -151,7 +151,7 @@ Each audit record stores the associated user, action, IP address, and timestamp.
 
 ---
 
-## 🔐 Authentication
+##  Authentication
 
 The API uses **JWT Bearer Authentication** for protected routes.
 
@@ -183,7 +183,7 @@ Passwords are never stored as plain text. They are hashed using `bcrypt` before 
 
 ---
 
-## ✅ Validation
+##  Validation
 
 Request bodies are validated using **Joi**.
 
@@ -214,7 +214,7 @@ Example:
 
 ---
 
-## 🌐 API Endpoints
+## API Endpoints
 
 ### Authentication
 
@@ -238,7 +238,7 @@ Example:
 
 ---
 
-# 📌 API Usage
+#  API Usage
 
 ## 1. Register a User
 
@@ -461,7 +461,7 @@ The endpoint demonstrates:
 
 ---
 
-# 💾 Database Transactions
+#  Database Transactions
 
 Financial operations use MySQL transactions to maintain data integrity.
 
@@ -513,7 +513,7 @@ No partial financial operation is saved.
 
 ---
 
-# 🔒 Security
+#  Security
 
 The project follows several backend security practices:
 
@@ -531,7 +531,7 @@ The project follows several backend security practices:
 
 ---
 
-# ⚙️ Installation
+#  Installation
 
 ## 1. Clone the repository
 
@@ -609,7 +609,7 @@ http://localhost:3000
 
 ---
 
-# 🧪 Testing
+#  Testing
 
 The API can be tested using **Postman**, Thunder Client, or another REST API client.
 
@@ -639,7 +639,7 @@ The following scenarios should be tested:
 
 ---
 
-# 📊 Database Integrity Rules
+# Database Integrity Rules
 
 The API enforces the following core business rules:
 
@@ -657,7 +657,7 @@ The API enforces the following core business rules:
 
 ---
 
-# 📐 Database Design Documentation
+# Database Design Documentation
 
 The Phase 1 database design is documented in:
 
@@ -687,7 +687,7 @@ schema.sql
 
 ---
 
-# 🎯 Project Objectives
+# Project Objectives
 
 This project demonstrates practical backend engineering skills in:
 
@@ -704,7 +704,7 @@ This project demonstrates practical backend engineering skills in:
 
 ---
 
-# 🚧 Project Constraints
+#  Project Constraints
 
 The project intentionally avoids ORMs and authentication frameworks.
 
@@ -729,7 +729,7 @@ This provides hands-on experience with the underlying database and API concepts.
 
 ---
 
-# 📚 Learning Outcomes
+#  Learning Outcomes
 
 By completing this project, the following backend concepts are demonstrated:
 
@@ -754,10 +754,4 @@ By completing this project, the following backend concepts are demonstrated:
 
 ---
 
-## 👤 Author
-
-**Edosa Samuel**
-
-Backend Engineering — Tech4Pride
-
-Built as a backend engineering capstone project using Node.js, Express, and MySQL.
+apstone project using Node.js, Express, and MySQL.
