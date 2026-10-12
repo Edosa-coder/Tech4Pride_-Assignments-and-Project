@@ -11,7 +11,8 @@ const { createAccountSchema
 const { createAccount,
         getAccounts,
         getAccountDetails,
-        getAccountHistory
+        getAccountHistory,
+        getAccountSummary
 } = require("./controllers/accountController");
 
 const router = express.Router();
@@ -43,12 +44,6 @@ router.get("/test-auth", authenticate, (req, res) => {
     });
 });
 
-router.post(
-    "/accounts",
-    authenticate,
-    validate(createAccountSchema),
-    createAccount
-);
 
 router.get(
     "/accounts",
@@ -57,14 +52,21 @@ router.get(
 );
 
 router.get(
+    "/accounts/summary",
+    authenticate,
+    getAccountSummary
+);
+
+router.get(
+    "/accounts/:account_number/history",
+    authenticate,
+    getAccountHistory
+);
+
+router.get(
     "/accounts/:account_number",
     authenticate,
     getAccountDetails
 );
 
-router.get(
-     "/accounts/:account_number/history",
-     authenticate,
-     getAccountHistory
-)
 module.exports = router;

@@ -1,5 +1,5 @@
 const pool = require("../db");
-
+// generation of account numbers
 const generateAccountNumber = async () => {
     while (true) {
         const accountNumber = Math.floor(
@@ -18,6 +18,7 @@ const generateAccountNumber = async () => {
         }
     }
 };
+//Creating new accounts
 
 const createAccount = async (req, res) => {
     try {
@@ -76,6 +77,8 @@ const createAccount = async (req, res) => {
     }
 };
 
+//Getting registered accounts
+
 const getAccounts = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -112,6 +115,8 @@ const getAccounts = async (req, res) => {
         });
     }
 };
+
+//Getting Account details
 const getAccountDetails = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -156,6 +161,7 @@ const getAccountDetails = async (req, res) => {
     }
 };
 
+//Account history
 const getAccountHistory = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -220,12 +226,67 @@ const getAccountHistory = async (req, res) => {
         });
     }
 };
-    
+//Account summary
+const getAccountSummary = async (req, res) => {
+    try{
+        const userId = req.user.userId;
 
+const [summary] = await pool.query(
+    `SELECT
+        COUNT(*) AS total_accounts,
+        COALESCE(SUM(balance), 0.00) AS total_balance,
+        SUM(CASE WHEN account_type = 'savings' THEN 1 ELSE 0 END) AS savings_accounts,
+        SUM(CASE WHEN account_type = 'current' THEN 1 ELSE 0 END) AS current_accounts,
+        SUM(CASE WHEN account_type = 'fixed' THEN 1 ELSE 0 END) AS fixed_accounts
+     FROM accounts
+     WHERE user_id = ?
+     AND is_active = 1`,
+    [userId]
+);
+        const [transactionSummary] = await pool.query(
+            `SELECT 
+                 COALESCE(SUM(CASE
+                    WHEN t.type ='deposit' THEN t.amount
+                    ELSE 0
+                END), 0.00) AS total_deposits,
+                COALESCE(SUM(CASE
+                   WHEN t.type = 'withdrawal' THEN t.amount
+                   ELSE 0
+                END), 0.00) AS total_withdrawals,
+                COALESCE(SUM(CASE
+                   WHEN t.type = 'transfer' THEN t.amount
+                   ELSE 0
+                END), 0.00) AS total_transfers
+                 FROM transactions t
+             LEFT JOIN accounts source_account
+                ON t.from_account_id = source_account.id
+             LEFT JOIN accounts destination_account
+                ON t.to_account_id = destination_account.id
+             WHERE (
+                source_account.user_id = ?
+                OR destination_account.user_id = ?
+             )
+             AND t.status = 'completed'`,
+            [userId, userId]
+        );
+
+        return res.status(200).json({
+            account_summary: summary[0],
+            transaction_summary: transactionSummary[0]
+        });
+    } catch (error) {
+        console.error("Get account summary error:", error);
+        return res.status(500).json({
+            error: "Internal server error."
+        });
+    }
+};
+        
 
 module.exports = {
     createAccount,
     getAccounts,
     getAccountDetails,
-    getAccountHistory
+    getAccountHistory,
+    getAccountSummary
 };
