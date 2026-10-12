@@ -10,7 +10,8 @@ const { createAccountSchema
 } = require("./validators/accountValidators");
 const { createAccount,
         getAccounts,
-        getAccountDetails
+        getAccountDetails,
+        getAccountHistory
 } = require("./controllers/accountController");
 
 const router = express.Router();
@@ -60,4 +61,10 @@ router.get(
     authenticate,
     getAccountDetails
 );
+
+router.get(
+     "/accounts/:account_number/history",
+     authenticate,
+     getAccountHistory
+)
 module.exports = router;

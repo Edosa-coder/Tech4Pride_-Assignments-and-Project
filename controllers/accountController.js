@@ -156,8 +156,76 @@ const getAccountDetails = async (req, res) => {
     }
 };
 
+const getAccountHistory = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { account_number } = req.params;
+
+        // Confirm that this account belongs to the logged-in user
+        const [accounts] = await pool.query(
+            `SELECT id
+             FROM accounts
+             WHERE account_number = ?
+             AND user_id = ?`,
+            [account_number, userId]
+        );
+
+        if (accounts.length === 0) {
+            return res.status(404).json({
+                error: "Account not found."
+            });
+        }
+
+        const accountId = accounts[0].id;
+
+        // Retrieve transactions involving this account
+        const [transactions] = await pool.query(
+            `SELECT
+                t.id,
+                t.reference,
+                t.type,
+                t.amount,
+                t.description,
+                t.status,
+                t.created_at,
+                from_account.account_number AS from_account_number,
+                from_user.full_name AS from_account_owner,
+                to_account.account_number AS to_account_number,
+                to_user.full_name AS to_account_owner
+             FROM transactions t
+             LEFT JOIN accounts from_account
+                ON t.from_account_id = from_account.id
+             LEFT JOIN users from_user
+                ON from_account.user_id = from_user.id
+             LEFT JOIN accounts to_account
+                ON t.to_account_id = to_account.id
+             LEFT JOIN users to_user
+                ON to_account.user_id = to_user.id
+             WHERE t.from_account_id = ?
+                OR t.to_account_id = ?
+             ORDER BY t.created_at DESC`,
+            [accountId, accountId]
+        );
+
+        return res.status(200).json({
+            account_number,
+            transactions
+        });
+
+    } catch (error) {
+        console.error("Get account history error:", error);
+
+        return res.status(500).json({
+            error: "Internal server error."
+        });
+    }
+};
+    
+
+
 module.exports = {
     createAccount,
     getAccounts,
-    getAccountDetails
+    getAccountDetails,
+    getAccountHistory
 };
