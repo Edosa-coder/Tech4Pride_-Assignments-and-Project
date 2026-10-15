@@ -69,4 +69,11 @@ router.get(
     getAccountDetails
 );
 
+router.post(
+    "/accounts",
+    authenticate,
+    validate(createAccountSchema),
+    createAccount
+)
+
 module.exports = router;
