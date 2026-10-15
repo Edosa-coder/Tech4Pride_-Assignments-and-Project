@@ -6,13 +6,15 @@ const { registerSchema ,
 const { register,
        login
 } = require("./controllers/authController");
-const { createAccountSchema 
+const { createAccountSchema,
+        depositSchema
 } = require("./validators/accountValidators");
 const { createAccount,
         getAccounts,
         getAccountDetails,
         getAccountHistory,
-        getAccountSummary
+        getAccountSummary,
+        deposit
 } = require("./controllers/accountController");
 
 const router = express.Router();
@@ -75,5 +77,13 @@ router.post(
     validate(createAccountSchema),
     createAccount
 )
+
+router.post(
+    "/accounts/deposit",
+    authenticate,
+    validate(depositSchema),
+    deposit
+);
+
 
 module.exports = router;

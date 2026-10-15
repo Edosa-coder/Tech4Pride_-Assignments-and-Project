@@ -70,3 +70,10 @@ NOT NULL
 AFTER account_number;
 
 DESCRIBE accounts;
+
+
+SELECT id, full_name, email, phone
+FROM users
+ORDER BY id DESC;
+
+DESCRIBE transactions;

@@ -1,4 +1,6 @@
 const pool = require("../db");
+const { v4: uuidv4 } = require("uuid");
+
 // generation of account numbers
 const generateAccountNumber = async () => {
     while (true) {
@@ -282,11 +284,85 @@ const [summary] = await pool.query(
     }
 };
         
+const deposit = async (req, res) => {
+    let connection;
+
+    try{
+        const userId = req.user.userId;
+        const { account_number, amount, description } = req.body;
+
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        const [accounts] = await connection.query(
+            `SELECT id, account_number, balance
+            FROM accounts
+            WHERE account_number = ?
+                AND user_id = ?
+                AND is_active = 1
+            FOR UPDATE`,
+            [account_number, userId]
+        );
+        if (accounts.length === 0) {
+            await connection.rollback();
+
+            return res.status(404).json({
+                message: "Active account not found."
+            });
+        }
+
+        const account = accounts [0];
+        const reference = `DEP-${uuidv4().replace(/-/g, "").slice(0, 16)}`;
+
+        await connection.query(
+            `UPDATE accounts
+            SET balance = balance + ?
+            WHERE id = ?`,
+            [amount, account.id]
+        );
+         await connection.query(
+            `INSERT INTO transactions
+                (reference, type, amount, from_account_id,
+                 to_account_id, description, status)
+             VALUES (?, 'deposit', ?, NULL, ?, ?, 'completed')`,
+            [reference, amount, account.id, description || null]
+        );
+
+        await connection.commit();
+
+        return res.status(201).json({
+            message: "Deposit successful.",
+            transaction: {
+                reference,
+                type: "deposit",
+                amount: Number(amount).toFixed(2),
+                account_number,
+                status: "completed"
+            }
+        });
+    } catch (error) {
+        if (connection) {
+            await connection.rollback();
+        }
+
+        console.error("Deposit error:", error);
+
+        return res.status(500).json({
+            message: "Internal server error."
+        });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
+    
 
 module.exports = {
     createAccount,
     getAccounts,
     getAccountDetails,
     getAccountHistory,
-    getAccountSummary
+    getAccountSummary,
+    deposit
 };
