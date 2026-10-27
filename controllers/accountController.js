@@ -505,6 +505,179 @@ const withdraw = async (req, res) => {
         }
     }
 };
+
+const transfer = async (req, res) => {
+    let connection;
+    let transactionStarted = false;
+
+    try {
+        const userId = req.user.userId;
+        const {
+            from_account_number,
+            to_account_number,
+            amount,
+            description
+        } = req.body;
+
+        //prevents transferring to the same account
+        if(from_account_number === to_account_number) {
+            return res.status(400).json({
+                message: "Source and destination accounts must be different."
+            });
+        }
+
+        connection = await pool.getConnection();
+
+        await connection.beginTransaction();
+        transactionStarted = true;
+
+        const accountNumbers = [
+            from_account_number,
+            to_account_number
+        ].sort();
+
+        const [accounts] = await connection.query(
+            `SELECT id, account_number, user_id, balance
+            FROM accounts 
+            WHERE account_number IN (?, ?)
+              AND is_active = 1
+            ORDER BY account_number
+            FOR UPDATE`,
+            accountNumbers
+        );
+
+const sourceAccount = accounts.find(
+    account =>
+        String(account.account_number) === String(from_account_number) &&
+        String(account.user_id) === String(userId)
+);
+
+const destinationAccount = accounts.find(
+    account =>
+        String(account.account_number) === String(to_account_number)
+);
+
+// Confirm the source account belongs to the logged-in user.
+if (!sourceAccount) {
+    await connection.rollback();
+    transactionStarted = false;
+
+    return res.status(404).json({
+        message: "Active source account not found."
+    });
+}
+
+// Confirm the destination account exists and is active.
+if (!destinationAccount) {
+    await connection.rollback();
+    transactionStarted = false;
+
+    return res.status(404).json({
+        message: "Active destination account not found."
+    });
+}
+
+
+        const balanceInKobo = Math.round(
+            Number(sourceAccount.balance) * 100
+        );
+        const amountInKobo = Math.round(
+            Number(amount) * 100
+        );
+
+        if (amountInKobo <= 0) {
+            await connection.rollback();
+            transactionStarted = false;
+
+            return res.status(400).json({
+                message: "Transfer amount must be greater than zero."
+            });
+        }
+
+        if (amountInKobo > balanceInKobo) {
+            await connection.rollback();
+            transactionStarted = false;
+
+            return res.status(400).json({
+                message: "Insufficient account balance."
+            });
+        }
+
+        // Debit the source account.
+        await connection.query(
+            `UPDATE accounts
+             SET balance = balance - ?
+             WHERE id = ?
+               AND balance >= ?`,
+            [amount, sourceAccount.id, amount]
+        );
+
+        // Credit the destination account.
+        await connection.query(
+            `UPDATE accounts
+             SET balance = balance + ?
+             WHERE id = ?`,
+            [amount, destinationAccount.id]
+        );
+
+        const reference =
+            `TRF-${uuidv4().replace(/-/g, "").slice(0, 16)}`;
+
+        // Record the transfer as one transaction.
+        await connection.query(
+            `INSERT INTO transactions
+                (reference, type, amount, from_account_id,
+                 to_account_id, description, status)
+             VALUES (?, 'transfer', ?, ?, ?, ?, 'completed')`,
+            [
+                reference,
+                amount,
+                sourceAccount.id,
+                destinationAccount.id,
+                description || null
+            ]
+        );
+
+        await connection.commit();
+        transactionStarted = false;
+
+        return res.status(201).json({
+            message: "Transfer successful.",
+            transaction: {
+                reference,
+                type: "transfer",
+                amount: Number(amount).toFixed(2),
+                from_account_number,
+                to_account_number,
+                status: "completed"
+            }
+        });
+
+    } catch (error) {
+        if (connection && transactionStarted) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error(
+                    "Transfer rollback error:",
+                    rollbackError
+                );
+            }
+        }
+
+        console.error("Transfer error:", error);
+
+        return res.status(500).json({
+            message: "Internal server error."
+        });
+
+    } finally {
+        if (connection && typeof connection.release === "function") {
+            connection.release();
+        }
+    }
+};
+    
 module.exports = {
     createAccount,
     getAccounts,
@@ -512,5 +685,6 @@ module.exports = {
     getAccountHistory,
     getAccountSummary,
     deposit,
-    withdraw
+    withdraw,
+    transfer
 };
