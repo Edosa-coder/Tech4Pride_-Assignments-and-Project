@@ -356,13 +356,161 @@ const deposit = async (req, res) => {
         }
     }
 };
-    
 
+
+const withdraw = async (req, res) => {
+    let connection;
+    let transactionStarted = false;
+
+    try {
+        const userId = req.user.userId;
+        const { account_number, amount, description } = req.body;
+
+        // Get a real database connection.
+        connection = await pool.getConnection();
+
+        // Confirm the returned connection supports transactions.
+        if (
+            !connection ||
+            typeof connection.beginTransaction !== "function" ||
+            typeof connection.query !== "function" ||
+            typeof connection.release !== "function"
+        ) {
+            throw new Error(
+                "Database pool did not return a valid connection."
+            );
+        }
+
+        await connection.beginTransaction();
+        transactionStarted = true;
+
+        // Find and lock the user's active account.
+        const [accounts] = await connection.query(
+            `SELECT id, account_number, balance
+             FROM accounts
+             WHERE account_number = ?
+               AND user_id = ?
+               AND is_active = 1
+             FOR UPDATE`,
+            [account_number, userId]
+        );
+
+        if (accounts.length === 0) {
+            await connection.rollback();
+            transactionStarted = false;
+
+            return res.status(404).json({
+                message: "Active account not found."
+            });
+        }
+
+        const account = accounts[0];
+
+        // Compare amounts in minor currency units to avoid
+        // floating-point errors when checking the balance.
+        const balanceInKobo = Math.round(
+            Number(account.balance) * 100
+        );
+
+        const amountInKobo = Math.round(
+            Number(amount) * 100
+        );
+
+        if (amountInKobo <= 0) {
+            await connection.rollback();
+            transactionStarted = false;
+
+            return res.status(400).json({
+                message: "Withdrawal amount must be greater than zero."
+            });
+        }
+
+        if (amountInKobo > balanceInKobo) {
+            await connection.rollback();
+            transactionStarted = false;
+
+            return res.status(400).json({
+                message: "Insufficient account balance."
+            });
+        }
+
+        // Deduct the withdrawal amount.
+        await connection.query(
+            `UPDATE accounts
+             SET balance = balance - ?
+             WHERE id = ?
+               AND balance >= ?`,
+            [amount, account.id, amount]
+        );
+
+        // Generate a unique transaction reference.
+        const reference =
+            `WDL-${uuidv4().replace(/-/g, "").slice(0, 16)}`;
+
+        // Record the completed withdrawal.
+        await connection.query(
+            `INSERT INTO transactions
+                (reference, type, amount, from_account_id,
+                 to_account_id, description, status)
+             VALUES (?, 'withdrawal', ?, ?, NULL, ?, 'completed')`,
+            [
+                reference,
+                amount,
+                account.id,
+                description || null
+            ]
+        );
+
+        // Commit the balance update and transaction record together.
+        await connection.commit();
+        transactionStarted = false;
+
+        const remainingBalance = (
+            (balanceInKobo - amountInKobo) / 100
+        ).toFixed(2);
+
+        return res.status(201).json({
+            message: "Withdrawal successful.",
+            transaction: {
+                reference,
+                type: "withdrawal",
+                amount: Number(amount).toFixed(2),
+                account_number: account.account_number,
+                remaining_balance: remainingBalance,
+                status: "completed"
+            }
+        });
+
+    } catch (error) {
+        if (connection && transactionStarted) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error(
+                    "Withdrawal rollback error:",
+                    rollbackError
+                );
+            }
+        }
+
+        console.error("Withdrawal error:", error);
+
+        return res.status(500).json({
+            message: "Internal server error."
+        });
+
+    } finally {
+        if (connection && typeof connection.release === "function") {
+            connection.release();
+        }
+    }
+};
 module.exports = {
     createAccount,
     getAccounts,
     getAccountDetails,
     getAccountHistory,
     getAccountSummary,
-    deposit
+    deposit,
+    withdraw
 };

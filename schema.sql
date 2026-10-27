@@ -77,3 +77,7 @@ FROM users
 ORDER BY id DESC;
 
 DESCRIBE transactions;
+
+SELECT id, full_name, email, phone, created_at
+FROM users
+ORDER BY id DESC;
