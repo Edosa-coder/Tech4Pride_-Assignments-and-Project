@@ -8,7 +8,8 @@ const { register,
 } = require("./controllers/authController");
 const { createAccountSchema,
         depositSchema,
-        withdrawSchema
+        withdrawSchema,
+        transferSchema
 } = require("./validators/accountValidators");
 const { createAccount,
         getAccounts,
@@ -16,7 +17,8 @@ const { createAccount,
         getAccountHistory,
         getAccountSummary,
         deposit,
-        withdraw
+        withdraw,
+        transfer
 } = require("./controllers/accountController");
 
 const router = express.Router();
@@ -94,5 +96,10 @@ router.post(
     withdraw
 );
 
-
+router.post(
+    "/accounts/transfer",
+    authenticate,
+    validate(transferSchema),
+    transfer
+);
 module.exports = router;

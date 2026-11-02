@@ -117,8 +117,7 @@ const getAccounts = async (req, res) => {
         });
     }
 };
-
-//Getting Account details
+// Getting Account details
 const getAccountDetails = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -127,6 +126,7 @@ const getAccountDetails = async (req, res) => {
         const [accounts] = await pool.query(
             `SELECT
                 a.id,
+                a.user_id,
                 a.account_number,
                 a.account_type,
                 a.balance,
@@ -139,9 +139,8 @@ const getAccountDetails = async (req, res) => {
                     WHERE u.id = a.user_id
                 ) AS owner_name
              FROM accounts a
-             WHERE a.account_number = ?
-             AND a.user_id = ?`,
-            [account_number, userId]
+             WHERE a.account_number = ?`,
+            [account_number]
         );
 
         if (accounts.length === 0) {
@@ -150,9 +149,15 @@ const getAccountDetails = async (req, res) => {
             });
         }
 
-        return res.status(200).json({
-            account: accounts[0]
-        });
+        if (accounts[0].user_id !== userId) {
+            return res.status(403).json({
+                error: "You are not authorized to access this account."
+            });
+        }
+
+        const { user_id, ...account } = accounts[0];
+
+        return res.status(200).json({ account });
 
     } catch (error) {
         console.error("Get account details error:", error);
@@ -162,7 +167,6 @@ const getAccountDetails = async (req, res) => {
         });
     }
 };
-
 //Account history
 const getAccountHistory = async (req, res) => {
     try {
