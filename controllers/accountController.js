@@ -94,7 +94,7 @@ const getAccounts = async (req, res) => {
                 accounts.currency,
                 accounts.is_active,
                 accounts.created_at,
-                users.full_name,
+                users.full_name AS owner_name,
                 users.email
              FROM accounts
              INNER JOIN users 
@@ -137,7 +137,13 @@ const getAccountDetails = async (req, res) => {
                     SELECT u.full_name
                     FROM users u
                     WHERE u.id = a.user_id
-                ) AS owner_name
+                ) AS owner_name,
+                 (
+               SELECT COUNT(*)
+               FROM transactions t
+            WHERE t.from_account_id = a.id
+             OR t.to_account_id = a.id
+           ) AS total_transactions
              FROM accounts a
              WHERE a.account_number = ?`,
             [account_number]
@@ -173,13 +179,19 @@ const getAccountHistory = async (req, res) => {
         const userId = req.user.userId;
         const { account_number } = req.params;
 
+        const page = Math.max(parseInt(req.query.page, 10) || 1, 1)
+        const limit = Math.min(
+            Math.max(parseInt(req.query.limit, 10) || 10, 1),
+            50
+        );
+        const offset = (page - 1) * limit;
+
         // Confirm that this account belongs to the logged-in user
         const [accounts] = await pool.query(
-            `SELECT id
+            `SELECT id, user_id
              FROM accounts
-             WHERE account_number = ?
-             AND user_id = ?`,
-            [account_number, userId]
+             WHERE account_number = ?`,
+            [account_number]
         );
 
         if (accounts.length === 0) {
@@ -187,6 +199,11 @@ const getAccountHistory = async (req, res) => {
                 error: "Account not found."
             });
         }
+        if (String(accounts[0].user_id) !== String(userId)) {
+    return res.status(403).json({
+        error: "You are not authorized to access this account."
+    });
+}
 
         const accountId = accounts[0].id;
 
@@ -201,9 +218,9 @@ const getAccountHistory = async (req, res) => {
                 t.status,
                 t.created_at,
                 from_account.account_number AS from_account_number,
-                from_user.full_name AS from_account_owner,
+                from_user.full_name AS from_owner_name,
                 to_account.account_number AS to_account_number,
-                to_user.full_name AS to_account_owner
+                to_user.full_name AS to_owner_name
              FROM transactions t
              LEFT JOIN accounts from_account
                 ON t.from_account_id = from_account.id
@@ -215,12 +232,15 @@ const getAccountHistory = async (req, res) => {
                 ON to_account.user_id = to_user.id
              WHERE t.from_account_id = ?
                 OR t.to_account_id = ?
-             ORDER BY t.created_at DESC`,
-            [accountId, accountId]
+             ORDER BY t.created_at DESC
+             LIMIT ? OFFSET ?`,
+            [accountId, accountId, limit, offset]
         );
 
         return res.status(200).json({
             account_number,
+            page,
+            limit,
             transactions
         });
 
@@ -237,45 +257,98 @@ const getAccountSummary = async (req, res) => {
     try{
         const userId = req.user.userId;
 
+
 const [summary] = await pool.query(
     `SELECT
         COUNT(*) AS total_accounts,
         COALESCE(SUM(balance), 0.00) AS total_balance,
-        SUM(CASE WHEN account_type = 'savings' THEN 1 ELSE 0 END) AS savings_accounts,
-        SUM(CASE WHEN account_type = 'current' THEN 1 ELSE 0 END) AS current_accounts,
-        SUM(CASE WHEN account_type = 'fixed' THEN 1 ELSE 0 END) AS fixed_accounts
+        COALESCE(MAX(balance), 0.00) AS highest_balance,
+        COALESCE(MIN(balance), 0.00) AS lowest_balance,
+
+        COALESCE(SUM(CASE
+            WHEN account_type = 'savings' THEN 1 ELSE 0
+        END), 0) AS savings_accounts,
+
+        COALESCE(SUM(CASE
+            WHEN account_type = 'current' THEN 1 ELSE 0
+        END), 0) AS current_accounts,
+
+        COALESCE(SUM(CASE
+            WHEN account_type = 'fixed' THEN 1 ELSE 0
+        END), 0) AS fixed_accounts
+
      FROM accounts
      WHERE user_id = ?
      AND is_active = 1`,
     [userId]
 );
-        const [transactionSummary] = await pool.query(
-            `SELECT 
-                 COALESCE(SUM(CASE
-                    WHEN t.type ='deposit' THEN t.amount
-                    ELSE 0
-                END), 0.00) AS total_deposits,
-                COALESCE(SUM(CASE
-                   WHEN t.type = 'withdrawal' THEN t.amount
-                   ELSE 0
-                END), 0.00) AS total_withdrawals,
-                COALESCE(SUM(CASE
-                   WHEN t.type = 'transfer' THEN t.amount
-                   ELSE 0
-                END), 0.00) AS total_transfers
-                 FROM transactions t
-             LEFT JOIN accounts source_account
-                ON t.from_account_id = source_account.id
-             LEFT JOIN accounts destination_account
-                ON t.to_account_id = destination_account.id
-             WHERE (
-                source_account.user_id = ?
-                OR destination_account.user_id = ?
-             )
-             AND t.status = 'completed'`,
-            [userId, userId]
-        );
 
+   const [transactionSummary] = await pool.query(
+    `SELECT
+        COALESCE((
+            SELECT SUM(t.amount)
+            FROM transactions t
+            INNER JOIN accounts a
+                ON a.id = t.from_account_id
+            WHERE a.user_id = u.id
+            AND t.status = 'completed'
+            AND t.type IN ('withdrawal', 'transfer')
+        ), 0.00) AS total_debits,
+
+        COALESCE((
+            SELECT SUM(t.amount)
+            FROM transactions t
+            INNER JOIN accounts a
+                ON a.id = t.to_account_id
+            WHERE a.user_id = u.id
+            AND t.status = 'completed'
+            AND t.type IN ('deposit', 'transfer')
+        ), 0.00) AS total_credits,
+
+        COALESCE((
+            SELECT SUM(t.amount)
+            FROM transactions t
+            INNER JOIN accounts a
+                ON a.id = t.to_account_id
+            WHERE a.user_id = u.id
+            AND t.status = 'completed'
+            AND t.type = 'deposit'
+        ), 0.00) AS total_deposits,
+
+        COALESCE((
+            SELECT SUM(t.amount)
+            FROM transactions t
+            INNER JOIN accounts a
+                ON a.id = t.from_account_id
+            WHERE a.user_id = u.id
+            AND t.status = 'completed'
+            AND t.type = 'withdrawal'
+        ), 0.00) AS total_withdrawals,
+
+        COALESCE((
+            SELECT SUM(t.amount)
+            FROM transactions t
+            INNER JOIN accounts a
+                ON a.id = t.from_account_id
+            WHERE a.user_id = u.id
+            AND t.status = 'completed'
+            AND t.type = 'transfer'
+        ), 0.00) AS total_transfers_sent,
+
+        COALESCE((
+            SELECT SUM(t.amount)
+            FROM transactions t
+            INNER JOIN accounts a
+                ON a.id = t.to_account_id
+            WHERE a.user_id = u.id
+            AND t.status = 'completed'
+            AND t.type = 'transfer'
+        ), 0.00) AS total_transfers_received
+
+     FROM users u
+     WHERE u.id = ?`,
+    [userId]
+);
         return res.status(200).json({
             account_summary: summary[0],
             transaction_summary: transactionSummary[0]
@@ -318,12 +391,16 @@ const deposit = async (req, res) => {
         const account = accounts [0];
         const reference = `DEP-${uuidv4().replace(/-/g, "").slice(0, 16)}`;
 
-        await connection.query(
-            `UPDATE accounts
-            SET balance = balance + ?
-            WHERE id = ?`,
-            [amount, account.id]
-        );
+       const [updateResult] = await connection.query(
+    `UPDATE accounts
+    SET balance = balance + ?
+    WHERE id = ?`,
+    [amount, account.id]
+);
+
+const newBalance = (
+    Number(account.balance) + Number(amount)
+).toFixed(2);
          await connection.query(
             `INSERT INTO transactions
                 (reference, type, amount, from_account_id,
@@ -334,14 +411,15 @@ const deposit = async (req, res) => {
 
         await connection.commit();
 
-        return res.status(201).json({
+        return res.status(200).json({
             message: "Deposit successful.",
             transaction: {
                 reference,
                 type: "deposit",
                 amount: Number(amount).toFixed(2),
                 account_number,
-                status: "completed"
+                status: "completed",
+                new_balance: newBalance
             }
         });
     } catch (error) {
@@ -433,7 +511,7 @@ const withdraw = async (req, res) => {
             await connection.rollback();
             transactionStarted = false;
 
-            return res.status(400).json({
+            return res.status(422).json({
                 message: "Insufficient account balance."
             });
         }
@@ -473,7 +551,7 @@ const withdraw = async (req, res) => {
             (balanceInKobo - amountInKobo) / 100
         ).toFixed(2);
 
-        return res.status(201).json({
+        return res.status(200).json({
             message: "Withdrawal successful.",
             transaction: {
                 reference,
@@ -566,7 +644,7 @@ if (!sourceAccount) {
     await connection.rollback();
     transactionStarted = false;
 
-    return res.status(404).json({
+    return res.status(403).json({
         message: "Active source account not found."
     });
 }
@@ -608,22 +686,30 @@ if (!destinationAccount) {
         }
 
         // Debit the source account.
-        await connection.query(
-            `UPDATE accounts
-             SET balance = balance - ?
-             WHERE id = ?
-               AND balance >= ?`,
-            [amount, sourceAccount.id, amount]
-        );
+       const [debitResult] = await connection.query(
+    `UPDATE accounts
+     SET balance = balance - ?
+     WHERE id = ?
+       AND balance >= ?`,
+    [amount, sourceAccount.id, amount]
+);
+
+if (debitResult.affectedRows !== 1) {
+    throw new Error("Transfer debit failed.");
+}
 
         // Credit the destination account.
-        await connection.query(
-            `UPDATE accounts
-             SET balance = balance + ?
-             WHERE id = ?`,
-            [amount, destinationAccount.id]
-        );
+     const [creditResult] = await connection.query(
+    `UPDATE accounts
+     SET balance = balance + ?
+     WHERE id = ?`,
+    [amount, destinationAccount.id]
+);
 
+if (creditResult.affectedRows !== 1) {
+    throw new Error("Transfer credit failed.");
+}
+    
         const reference =
             `TRF-${uuidv4().replace(/-/g, "").slice(0, 16)}`;
 
@@ -645,7 +731,7 @@ if (!destinationAccount) {
         await connection.commit();
         transactionStarted = false;
 
-        return res.status(201).json({
+        return res.status(200).json({
             message: "Transfer successful.",
             transaction: {
                 reference,

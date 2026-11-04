@@ -7,7 +7,7 @@ const createAccountSchema = Joi.object({
 
     currency: Joi.string()
         .length(3)
-        .uppercase()
+        .pattern(/^[A-Z]{3}$/)
         .default("NGN")
 });
 
@@ -16,15 +16,24 @@ const depositSchema = Joi.object({
           .pattern(/^[0-9]{10}$/)
           .required(),
 
-    amount: Joi.number()
-          .positive()
-          .precision(2)
-          .required(),
+   amount: Joi.number()
+    .positive()
+    .custom((value, helpers) => {
+        if (Math.round(value * 100) !== value * 100) {
+            return helpers.error("number.precision");
+        }
+
+        return value;
+    })
+     .messages ({
+        "number.precision": "Amount must have no more than 2 decimal places"
+     })
+    .required(),
 
     description: Joi.string()
         .trim()
         .max(255)
-        .allow(" ", null)
+        .allow("", null)
         .optional()
 });
 
@@ -35,13 +44,21 @@ const withdrawSchema = Joi.object({
     
        amount: Joi.number()
           .positive()
-          .precision(2)
+          .custom((value, helpers) => {
+              if (Math.round(value * 100) !== value * 100) {
+                  return helpers.error("number.precision");
+              }
+              return value;
+          })
+          .messages ({
+              "number.precision": "Amount must have no more than 2 decimal places"
+          })
           .required(),
 
         description: Joi.string()
             .trim()
             .max(255)
-            .allow(" ", null)
+            .allow("", null)
             .optional()
 });
 
@@ -56,7 +73,15 @@ const transferSchema = Joi.object({
 
     amount: Joi.number()
        .positive()
-       .precision(2)
+       .custom((value, helpers) => {
+           if (Math.round(value * 100) !== value * 100) {
+               return helpers.error("number.precision");
+           }
+           return value;
+       })
+       .messages ({
+           "number.precision": "Amount must have no more than 2 decimal places"
+       })
        .required(),
 
     description: Joi.string()
@@ -64,6 +89,14 @@ const transferSchema = Joi.object({
         .max(255)
         .allow("", null)
         .optional()
+}).custom((value, helpers) => {
+    if (value.from_account_number === value.to_account_number) {
+        return helpers.error("any.invalid");
+    }
+
+    return value;
+}).messages({
+    "any.invalid": "Source and destination accounts must be different."
 });
 
 module.exports = {

@@ -13,7 +13,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS audit_log;
-DROP TABLE IF EXISTS audit;
 DROP TABLE IF EXISTS accounts;
 DROP TABLE IF EXISTS users;
 
@@ -133,4 +132,3 @@ CREATE TABLE transactions (
     INDEX idx_transactions_to_account (to_account_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-SELECT @@check_constraint_checks;

@@ -1,3 +1,4 @@
+const authenticate = require("./middleware/authMiddleware");
 const express = require("express");
 const validate = require("./middleware/validate");
 const { registerSchema ,
@@ -41,7 +42,6 @@ router.post(
     validate(loginSchema),
     login
 );
-const authenticate = require("./middleware/authMiddleware");
 
 router.get("/test-auth", authenticate, (req, res) => {
     res.json({
